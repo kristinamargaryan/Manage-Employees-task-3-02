@@ -1,26 +1,27 @@
 const request_url = "https://jsonplaceholder.typicode.com/users";
 let tbody = document.getElementById("tbody");
-let deleteBtn = document.querySelector("#del_button");
 let deletedUserId = "";
 let editUserId = "";
 let selectUserId = "";
 let users = [];
+let id = 11
 const add_employee = document.forms.main;
 const edit_form = document.forms.edit_form;
-
+const editModal = document.querySelector("#popup_edit");
+const delModal = document.querySelector("#popup_del");
+const addModal = document.querySelector("#addEmployeeModal");
+const add_button = document.querySelector(".add");
 fetch(request_url)
   .then((res) => res.json())
   .then((json) => {
     users = json;
     createUsers(json);
   });
-
 function td_fun({ id, name, email, address, phone }) {
   let tr = document.createElement("tr");
   tr.setAttribute("data-id", id);
 
   tr.innerHTML = ` 
- 
     <td>
         <span class="custom-checkbox">
             <input type="checkbox" id="checkbox1"/>
@@ -32,54 +33,54 @@ function td_fun({ id, name, email, address, phone }) {
     <td>${address.street}</td>
     <td>${phone}</td>
     <td> 
-      <a href="#popup_del" class=" btn btn-primary " onclick= 'deletedUserId = ${id}' >DELETED</a>
-      <a href="#popup_edit" class=" btn btn-primary " id='del'   onclick="selectUser(${id})"  >EDIT</a>
+      <button class=" btn btn-primary del" onclick= 'deletedUserId = ${id}' >DELETED</button>
+      <button class=" btn btn-primary edit" onclick="selectUser(${id})"  >EDIT</button>
     </td>
   `;
-
   return tr;
 }
-
 function createUsers(data) {
   tbody.innerHTML = ``;
   data.map((users) => {
     tbody.append(td_fun(users));
   });
 }
-
 function deleted_User() {
   let id = deletedUserId;
-
-  let index = users.findIndex((user) => {
-    return user.id == id;
+  let arr = users.filter((user) => {
+    return user.id !== id;
   });
-
+  createUsers(arr);
+  users = arr;
   fetch(` https://jsonplaceholder.typicode.com/users/${id}`, {
     method: "DELETE",
   })
     .then((res) => res.json())
     .then((json) => {
-      console.log("GOOD");
-      user = users.splice(index, 1);
-      tbody.querySelectorAll("tr")[index].remove();
+      delModal.style.display = "none";
     });
 }
 
+
 function addUser(e) {
   e.preventDefault();
-
   let tr = document.createElement("tr");
 
-  let new_user = {};
 
+  let new_user = {};
+  new_user.id = id
   new_user.name = add_employee.inputName.value;
   new_user.email = add_employee.inputEmail.value;
   new_user.address = add_employee.inputAddress.value;
   new_user.phone = add_employee.inputPhone.value;
   users.push(new_user);
+  new_user.id = id++;
+  add_employee.inputName.value='';
+  add_employee.inputEmail.value='';
+  add_employee.inputAddress.value='';
+  add_employee.inputPhone.value='';
 
   tr.innerHTML = ` 
- 
     <td>
         <span class="custom-checkbox">
             <input type="checkbox" id="checkbox1"/>
@@ -91,16 +92,13 @@ function addUser(e) {
     <td>${new_user.address}</td>
     <td>${new_user.phone}</td>
     <td>
-      <a href="#popup_del" class=" btn btn-primary " onclick= 'deletedUserId = ${new_user.id}' >DELETED</a>
-      <a href="#popup_edit" class=" btn btn-primary "    >EDIT</a>
-
+      <button class=" btn btn-primary del" onclick= 'deletedUserId = ${new_user.id}'  >DELETED</button>
+      <button class=" btn btn-primary edit" onclick="selectUser(${new_user.id})"  >EDIT</button>
     </td>
-    
     `;
   tbody.append(td_fun(new_user));
   fetch(`https://jsonplaceholder.typicode.com/users`, {
     method: "POST",
-
     body: JSON.stringify({
       id: new_user.id,
       name: new_user.name,
@@ -112,10 +110,18 @@ function addUser(e) {
       "Content-type": "application/json; charset=UTF-8",
     },
   })
-    .then((response) => response.json())
-    .then((json) => console.log(json));
-}
+    .then((response) => {
+      if (response.status == 200) {
+        return response.json();
+      }
+    })
+    .then((json) => (addModal.style.display = "none"
+     )
+   
+    );
+   
 
+}
 function selectUser(id) {
   selectUserId = id;
   let index = users.findIndex((user) => {
@@ -128,10 +134,8 @@ function selectUser(id) {
   edit_form.edte_phone.value = users[index].phone;
   editUserId = id;
 }
-
 function editUser(e) {
   e.preventDefault();
-
   users?.map((elem) => {
     if (elem.id === editUserId) {
       elem.name = edit_form.edte_name.value;
@@ -140,9 +144,7 @@ function editUser(e) {
       elem.phone = edit_form.edte_phone.value;
     }
   });
-
   createUsers(users);
-
   fetch(` https://jsonplaceholder.typicode.com/users/${editUserId}`, {
     method: "PUT",
     body: JSON.stringify({
@@ -158,19 +160,29 @@ function editUser(e) {
   })
     .then((response) => {
       if (response.status == 200) {
-        // $('#del').click();
-        document.querySelector("#popup_edit").style.opacity = 0;
-        document.querySelector("#popup_edit").style.visibility = hidden;
-        
-       
-      }  else
-{
-
-}
+      }
       return response.json();
     })
-    .then((json) => console.log("Good", json));
+    .then((json) => (editModal.style.display = "none"));
 }
-
+function editRow(e) {
+  if (e.target.classList.contains("edit")) {
+    editModal.style.display = "flex";
+  }
+  if (e.target.classList.contains("del")) {
+    delModal.style.display = "flex";
+  }
+}
 edit_form.addEventListener("submit", (e) => editUser(e));
 add_employee.addEventListener("submit", (e) => addUser(e));
+const addclose = document.querySelector(".addclose");
+addclose.addEventListener("click", (e) => {
+  addModal.style.display = "none";
+});
+tbody.addEventListener("click", editRow);
+add_button.addEventListener("click", () => {
+  addModal.style.display = "block";
+});
+document.querySelector(".del_cencel").addEventListener("click", (e) => {
+  delModal.style.display = "none";
+});
